@@ -1,0 +1,8 @@
+{
+  "name": "Remix ক্ষ্যাপ",
+  "description": "Dhaka-based musician showcase, video reel stage, and BDT booking marketplace inspired by Jamini Roy folk art and rickshaw paint.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

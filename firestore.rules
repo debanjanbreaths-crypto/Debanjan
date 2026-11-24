@@ -1,0 +1,585 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 4.1: Global Safety Net (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidStringList(list, maxLen) {
+      return list is list && list.size() <= maxLen && (list.size() == 0 || list[0] is string);
+    }
+
+    // --- ENTITY VALIDATION HELPERS ---
+    function isValidUserAccount(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 40 &&
+             data.role in ['MUSICIAN', 'CLIENT'] &&
+             data.avatarUrl is string && data.avatarUrl.size() <= 500 &&
+             data.bio is string && data.bio.size() <= 500 &&
+             data.location is string && data.location.size() <= 100 &&
+             data.verified is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidSocialConnection(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.provider in ['INSTAGRAM', 'YOUTUBE', 'SPOTIFY'] &&
+             data.externalHandle is string && data.externalHandle.size() >= 1 && data.externalHandle.size() <= 60 &&
+             data.profileUrl is string && data.profileUrl.size() <= 500 &&
+             data.followerCount is int && data.followerCount >= 0 && data.followerCount <= 100000000 &&
+             data.connected is bool &&
+             data.sandboxMode is bool &&
+             isValidTimestamp(data.lastSyncedAt) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidMusicianProfile(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 40 &&
+             data.avatarUrl is string && data.avatarUrl.size() <= 500 &&
+             data.coverUrl is string && data.coverUrl.size() <= 500 &&
+             data.bio is string && data.bio.size() <= 600 &&
+             data.location is string && data.location.size() <= 100 &&
+             data.remoteAvailable is bool &&
+             data.verified is bool &&
+             data.instagramConnected is bool &&
+             data.instagramHandle is string && data.instagramHandle.size() <= 60 &&
+             data.instagramFollowers is int && data.instagramFollowers >= 0 && data.instagramFollowers <= 100000000 &&
+             isValidStringList(data.specialties, 10) &&
+             isValidStringList(data.genres, 10) &&
+             isValidStringList(data.instruments, 15) &&
+             data.experienceYears is int && data.experienceYears >= 0 && data.experienceYears <= 80 &&
+             data.hourlyRate is int && data.hourlyRate >= 0 && data.hourlyRate <= 50000 &&
+             data.perGigRate is int && data.perGigRate >= 0 && data.perGigRate <= 200000 &&
+             data.perTrackRate is int && data.perTrackRate >= 0 && data.perTrackRate <= 100000 &&
+             data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 10 &&
+             data.availabilityStatus in ['AVAILABLE', 'LIMITED', 'BOOKED'] &&
+             data.gearList is string && data.gearList.size() <= 1000 &&
+             data.hasVideoDemos is bool &&
+             data.publicListed is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidPortfolioItem(data) {
+      return data.musicianId is string && data.musicianId.size() >= 1 && data.musicianId.size() <= 128 &&
+             data.musicianName is string && data.musicianName.size() >= 1 && data.musicianName.size() <= 80 &&
+             data.musicianHandle is string && data.musicianHandle.size() >= 2 && data.musicianHandle.size() <= 40 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.mediaType in ['NATIVE_VIDEO', 'INSTAGRAM_REEL', 'YOUTUBE_VIDEO', 'AUDIO'] &&
+             data.sourceUrl is string && data.sourceUrl.size() >= 1 && data.sourceUrl.size() <= 800 &&
+             data.thumbnailUrl is string && data.thumbnailUrl.size() <= 800 &&
+             data.aspectRatio in ['9:16', '16:9', '1:1'] &&
+             data.genreTag is string && data.genreTag.size() >= 1 && data.genreTag.size() <= 40 &&
+             data.duration is string && data.duration.size() >= 1 && data.duration.size() <= 20 &&
+             data.viewsCount is int && data.viewsCount >= 0 && data.viewsCount <= 1000000000 &&
+             data.publicListed is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidFeedPost(data) {
+      return data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.authorHandle is string && data.authorHandle.size() >= 2 && data.authorHandle.size() <= 40 &&
+             data.authorAvatarUrl is string && data.authorAvatarUrl.size() <= 500 &&
+             data.authorVerified is bool &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 1000 &&
+             data.mediaType in ['VIDEO', 'REEL_EMBED', 'AUDIO', 'IMAGE', 'NONE'] &&
+             data.mediaUrl is string && data.mediaUrl.size() <= 800 &&
+             data.thumbnailUrl is string && data.thumbnailUrl.size() <= 800 &&
+             data.postType in ['JAM_CLIP', 'LIVE_PERFORMANCE', 'LOOKING_FOR_BANDMATE', 'GEAR_TALK'] &&
+             data.likesCount is int && data.likesCount >= 0 && data.likesCount <= 100000000 &&
+             data.commentsCount is int && data.commentsCount >= 0 && data.commentsCount <= 100000000 &&
+             data.publicListed is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidLikedPost(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.postId is string && data.postId.size() >= 1 && data.postId.size() <= 128 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidPostComment(data) {
+      return data.postId is string && data.postId.size() >= 1 && data.postId.size() <= 128 &&
+             data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.authorHandle is string && data.authorHandle.size() >= 2 && data.authorHandle.size() <= 40 &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 400 &&
+             data.publicListed is bool &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidGigListing(data) {
+      return data.clientId is string && data.clientId.size() >= 1 && data.clientId.size() <= 128 &&
+             data.clientName is string && data.clientName.size() >= 1 && data.clientName.size() <= 80 &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 120 &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 1500 &&
+             isValidStringList(data.requiredSpecialties, 10) &&
+             data.genre is string && data.genre.size() >= 1 && data.genre.size() <= 50 &&
+             data.location is string && data.location.size() >= 1 && data.location.size() <= 100 &&
+             data.remote is bool &&
+             data.eventDate is string && data.eventDate.size() >= 1 && data.eventDate.size() <= 40 &&
+             data.budgetMin is int && data.budgetMin >= 0 && data.budgetMin <= 1000000 &&
+             data.budgetMax is int && data.budgetMax >= data.budgetMin && data.budgetMax <= 1000000 &&
+             data.status in ['OPEN', 'FILLED'] &&
+             data.publicListed is bool &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidGigApplication(data) {
+      return data.gigId is string && data.gigId.size() >= 1 && data.gigId.size() <= 128 &&
+             data.gigTitle is string && data.gigTitle.size() >= 1 && data.gigTitle.size() <= 120 &&
+             data.clientId is string && data.clientId.size() >= 1 && data.clientId.size() <= 128 &&
+             data.musicianId is string && data.musicianId.size() >= 1 && data.musicianId.size() <= 128 &&
+             data.musicianName is string && data.musicianName.size() >= 1 && data.musicianName.size() <= 80 &&
+             data.musicianHandle is string && data.musicianHandle.size() >= 2 && data.musicianHandle.size() <= 40 &&
+             data.attachedReelTitle is string && data.attachedReelTitle.size() <= 120 &&
+             data.attachedReelUrl is string && data.attachedReelUrl.size() <= 800 &&
+             data.proposedRate is int && data.proposedRate >= 0 && data.proposedRate <= 500000 &&
+             data.rateType in ['HOURLY', 'PER_GIG', 'PER_TRACK'] &&
+             data.note is string && data.note.size() <= 500 &&
+             data.status in ['APPLIED', 'SHORTLISTED', 'DECLINED'] &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.musicianId in data.participantUids &&
+             data.clientId in data.participantUids &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidBooking(data) {
+      return data.clientId is string && data.clientId.size() >= 1 && data.clientId.size() <= 128 &&
+             data.clientName is string && data.clientName.size() >= 1 && data.clientName.size() <= 80 &&
+             data.musicianId is string && data.musicianId.size() >= 1 && data.musicianId.size() <= 128 &&
+             data.clientId != data.musicianId &&
+             data.musicianName is string && data.musicianName.size() >= 1 && data.musicianName.size() <= 80 &&
+             data.musicianHandle is string && data.musicianHandle.size() >= 2 && data.musicianHandle.size() <= 40 &&
+             data.musicianAvatarUrl is string && data.musicianAvatarUrl.size() <= 500 &&
+             data.gigId is string && data.gigId.size() <= 128 &&
+             data.proposedRate is int && data.proposedRate >= 1 && data.proposedRate <= 1000000 &&
+             data.rateType in ['HOURLY', 'PER_GIG', 'PER_TRACK'] &&
+             data.eventDate is string && data.eventDate.size() >= 1 && data.eventDate.size() <= 40 &&
+             data.scopeNotes is string && data.scopeNotes.size() >= 1 && data.scopeNotes.size() <= 1000 &&
+             data.lastMessagePreview is string && data.lastMessagePreview.size() <= 300 &&
+             data.status in ['PENDING', 'ACCEPTED', 'DECLINED', 'COMPLETED'] &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.clientId in data.participantUids &&
+             data.musicianId in data.participantUids &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidBookingMessage(data) {
+      return data.bookingId is string && data.bookingId.size() >= 1 && data.bookingId.size() <= 128 &&
+             data.senderId is string && data.senderId.size() >= 1 && data.senderId.size() <= 128 &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 80 &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 1000 &&
+             data.messageType in ['TEXT', 'BOOKING_OFFER', 'STATUS_UPDATE'] &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.senderId in data.participantUids &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidMusicianReview(data) {
+      return data.musicianId is string && data.musicianId.size() >= 1 && data.musicianId.size() <= 128 &&
+             data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 &&
+             data.authorId != data.musicianId &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 500 &&
+             data.publicListed is bool &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    // --- COLLECTIONS ---
+
+    // 1. Private User Accounts & Subcollections
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().verified == false &&
+                       incoming().keys().hasAll(['userId', 'name', 'handle', 'role', 'avatarUrl', 'bio', 'location', 'verified', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'name', 'handle', 'role', 'avatarUrl', 'bio', 'location', 'verified', 'createdAt', 'updatedAt']) &&
+                       isValidUserAccount(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserAccount(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().verified == existing().verified &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'handle', 'role', 'avatarUrl', 'bio', 'location', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /social_connections/{connectionId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(connectionId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(connectionId) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'provider', 'externalHandle', 'profileUrl', 'followerCount', 'connected', 'sandboxMode', 'lastSyncedAt', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'provider', 'externalHandle', 'profileUrl', 'followerCount', 'connected', 'sandboxMode', 'lastSyncedAt', 'createdAt', 'updatedAt']) &&
+                         isValidSocialConnection(incoming());
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(connectionId) &&
+                         request.auth.uid == userId &&
+                         isValidSocialConnection(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().provider == existing().provider &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['externalHandle', 'profileUrl', 'followerCount', 'connected', 'sandboxMode', 'lastSyncedAt', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(connectionId) && request.auth.uid == userId;
+      }
+
+      match /liked_posts/{postId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(postId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(postId) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().postId == postId &&
+                         incoming().keys().hasAll(['userId', 'postId', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'postId', 'createdAt']) &&
+                         isValidLikedPost(incoming());
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(postId) && request.auth.uid == userId;
+      }
+    }
+
+    // 2. Public Musician Profiles
+    match /musician_profiles/{profileId} {
+      allow get: if isSignedIn() && isValidId(profileId) && (profileId == request.auth.uid || (resource != null && (existing().publicListed == true || existing().userId == request.auth.uid)));
+      allow list: if isSignedIn() && (existing().publicListed == true || existing().userId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(profileId) &&
+                       profileId == request.auth.uid &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().verified == false &&
+                       incoming().keys().hasAll([
+                         'userId', 'name', 'handle', 'avatarUrl', 'coverUrl', 'bio', 'location',
+                         'remoteAvailable', 'verified', 'instagramConnected', 'instagramHandle',
+                         'instagramFollowers', 'specialties', 'genres', 'instruments',
+                         'experienceYears', 'hourlyRate', 'perGigRate', 'perTrackRate',
+                         'currency', 'availabilityStatus', 'gearList', 'hasVideoDemos',
+                         'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'name', 'handle', 'avatarUrl', 'coverUrl', 'bio', 'location',
+                         'remoteAvailable', 'verified', 'instagramConnected', 'instagramHandle',
+                         'instagramFollowers', 'specialties', 'genres', 'instruments',
+                         'experienceYears', 'hourlyRate', 'perGigRate', 'perTrackRate',
+                         'currency', 'availabilityStatus', 'gearList', 'hasVideoDemos',
+                         'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidMusicianProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(profileId) &&
+                       existing().userId == request.auth.uid &&
+                       isValidMusicianProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().verified == existing().verified &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'handle', 'avatarUrl', 'coverUrl', 'bio', 'location',
+                         'remoteAvailable', 'instagramConnected', 'instagramHandle',
+                         'instagramFollowers', 'specialties', 'genres', 'instruments',
+                         'experienceYears', 'hourlyRate', 'perGigRate', 'perTrackRate',
+                         'currency', 'availabilityStatus', 'gearList', 'hasVideoDemos',
+                         'publicListed', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(profileId) && existing().userId == request.auth.uid;
+    }
+
+    // 3. Portfolio Items (Videos, Reels, YouTube Embeds, Audio Demos)
+    match /portfolio_items/{itemId} {
+      allow get: if isSignedIn() && isValidId(itemId) && resource != null && (existing().publicListed == true || existing().musicianId == request.auth.uid);
+      allow list: if isSignedIn() && (existing().publicListed == true || existing().musicianId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(itemId) &&
+                       incoming().musicianId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'musicianId', 'musicianName', 'musicianHandle', 'title', 'mediaType',
+                         'sourceUrl', 'thumbnailUrl', 'aspectRatio', 'genreTag', 'duration',
+                         'viewsCount', 'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'musicianId', 'musicianName', 'musicianHandle', 'title', 'mediaType',
+                         'sourceUrl', 'thumbnailUrl', 'aspectRatio', 'genreTag', 'duration',
+                         'viewsCount', 'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidPortfolioItem(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(itemId) &&
+                       existing().musicianId == request.auth.uid &&
+                       isValidPortfolioItem(incoming()) &&
+                       incoming().musicianId == existing().musicianId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'sourceUrl', 'thumbnailUrl', 'genreTag', 'duration', 'publicListed', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(itemId) && existing().musicianId == request.auth.uid;
+    }
+
+    // 4. Social Feed Posts
+    match /posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId) && resource != null && (existing().publicListed == true || existing().authorId == request.auth.uid);
+      allow list: if isSignedIn() && (existing().publicListed == true || existing().authorId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(postId) &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().likesCount == 0 &&
+                       incoming().commentsCount == 0 &&
+                       incoming().keys().hasAll([
+                         'authorId', 'authorName', 'authorHandle', 'authorAvatarUrl', 'authorVerified',
+                         'content', 'mediaType', 'mediaUrl', 'thumbnailUrl', 'postType',
+                         'likesCount', 'commentsCount', 'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'authorId', 'authorName', 'authorHandle', 'authorAvatarUrl', 'authorVerified',
+                         'content', 'mediaType', 'mediaUrl', 'thumbnailUrl', 'postType',
+                         'likesCount', 'commentsCount', 'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidFeedPost(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(postId) &&
+                       isValidFeedPost(incoming()) &&
+                       incoming().authorId == existing().authorId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (existing().authorId == request.auth.uid &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['content', 'mediaType', 'mediaUrl', 'thumbnailUrl', 'postType', 'publicListed', 'updatedAt'])) ||
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(postId) && existing().authorId == request.auth.uid;
+    }
+
+    // 5. Post Comments
+    match /post_comments/{commentId} {
+      allow get: if isSignedIn() && isValidId(commentId) && resource != null && (existing().publicListed == true || existing().authorId == request.auth.uid);
+      allow list: if isSignedIn() && (existing().publicListed == true || existing().authorId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(commentId) &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().keys().hasAll(['postId', 'authorId', 'authorName', 'authorHandle', 'text', 'publicListed', 'createdAt']) &&
+                       incoming().keys().hasOnly(['postId', 'authorId', 'authorName', 'authorHandle', 'text', 'publicListed', 'createdAt']) &&
+                       isValidPostComment(incoming());
+
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(commentId) && existing().authorId == request.auth.uid;
+    }
+
+    // 6. Open Gigs
+    match /gigs/{gigId} {
+      allow get: if isSignedIn() && isValidId(gigId) && resource != null && (existing().publicListed == true || existing().clientId == request.auth.uid);
+      allow list: if isSignedIn() && (existing().publicListed == true || existing().clientId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(gigId) &&
+                       incoming().clientId == request.auth.uid &&
+                       incoming().status == 'OPEN' &&
+                       incoming().keys().hasAll([
+                         'clientId', 'clientName', 'title', 'description', 'requiredSpecialties',
+                         'genre', 'location', 'remote', 'eventDate', 'budgetMin', 'budgetMax',
+                         'status', 'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'clientId', 'clientName', 'title', 'description', 'requiredSpecialties',
+                         'genre', 'location', 'remote', 'eventDate', 'budgetMin', 'budgetMax',
+                         'status', 'publicListed', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidGigListing(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(gigId) &&
+                       existing().clientId == request.auth.uid &&
+                       existing().status != 'FILLED' &&
+                       isValidGigListing(incoming()) &&
+                       incoming().clientId == existing().clientId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'status', 'publicListed', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(gigId) && existing().clientId == request.auth.uid;
+    }
+
+    // 7. Gig Applications (Private between musician and client)
+    match /gig_applications/{applicationId} {
+      allow get: if isSignedIn() && isValidId(applicationId) && resource != null && request.auth.uid in existing().participantUids;
+      allow list: if isSignedIn() && request.auth.uid in existing().participantUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(applicationId) &&
+                       incoming().musicianId == request.auth.uid &&
+                       incoming().musicianId != incoming().clientId &&
+                       request.auth.uid in incoming().participantUids &&
+                       incoming().status == 'APPLIED' &&
+                       incoming().keys().hasAll([
+                         'gigId', 'gigTitle', 'clientId', 'musicianId', 'musicianName',
+                         'musicianHandle', 'attachedReelTitle', 'attachedReelUrl',
+                         'proposedRate', 'rateType', 'note', 'status', 'participantUids',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'gigId', 'gigTitle', 'clientId', 'musicianId', 'musicianName',
+                         'musicianHandle', 'attachedReelTitle', 'attachedReelUrl',
+                         'proposedRate', 'rateType', 'note', 'status', 'participantUids',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidGigApplication(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(applicationId) &&
+                       request.auth.uid in existing().participantUids &&
+                       existing().clientId == request.auth.uid &&
+                       existing().status == 'APPLIED' &&
+                       isValidGigApplication(incoming()) &&
+                       incoming().musicianId == existing().musicianId &&
+                       incoming().clientId == existing().clientId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(applicationId) && existing().musicianId == request.auth.uid;
+    }
+
+    // 8. Bookings & Messages (Strictly private to participants)
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn() && isValidId(bookingId) && resource != null && request.auth.uid in existing().participantUids;
+      allow list: if isSignedIn() && request.auth.uid in existing().participantUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(bookingId) &&
+                       incoming().clientId == request.auth.uid &&
+                       incoming().clientId != incoming().musicianId &&
+                       request.auth.uid in incoming().participantUids &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll([
+                         'clientId', 'clientName', 'musicianId', 'musicianName',
+                         'musicianHandle', 'musicianAvatarUrl', 'gigId', 'proposedRate',
+                         'rateType', 'eventDate', 'scopeNotes', 'lastMessagePreview',
+                         'status', 'participantUids', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'clientId', 'clientName', 'musicianId', 'musicianName',
+                         'musicianHandle', 'musicianAvatarUrl', 'gigId', 'proposedRate',
+                         'rateType', 'eventDate', 'scopeNotes', 'lastMessagePreview',
+                         'status', 'participantUids', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidBooking(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(bookingId) &&
+                       request.auth.uid in existing().participantUids &&
+                       isValidBooking(incoming()) &&
+                       incoming().clientId == existing().clientId &&
+                       incoming().musicianId == existing().musicianId &&
+                       incoming().participantUids == existing().participantUids &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Chat preview update (available on active bookings)
+                         (existing().status in ['PENDING', 'ACCEPTED'] &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['lastMessagePreview', 'updatedAt'])) ||
+                         // Action: Musician accepts/declines pending booking (or client completes accepted booking)
+                         (existing().status == 'PENDING' &&
+                           incoming().status in ['ACCEPTED', 'DECLINED'] &&
+                           (existing().musicianId == request.auth.uid || existing().musicianId.matches('^seed_.*')) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastMessagePreview', 'updatedAt'])) ||
+                         (existing().status == 'ACCEPTED' &&
+                           incoming().status == 'COMPLETED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'lastMessagePreview', 'updatedAt']))
+                       );
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(bookingId) && isValidId(messageId) && resource != null && request.auth.uid in existing().participantUids;
+        allow list: if isSignedIn() && request.auth.uid in existing().participantUids;
+
+        allow create: if isSignedIn() &&
+                         isValidId(bookingId) &&
+                         isValidId(messageId) &&
+                         incoming().bookingId == bookingId &&
+                         incoming().senderId == request.auth.uid &&
+                         request.auth.uid in incoming().participantUids &&
+                         incoming().keys().hasAll(['bookingId', 'senderId', 'senderName', 'text', 'messageType', 'participantUids', 'createdAt']) &&
+                         incoming().keys().hasOnly(['bookingId', 'senderId', 'senderName', 'text', 'messageType', 'participantUids', 'createdAt']) &&
+                         isValidBookingMessage(incoming()) &&
+                         exists(/databases/$(database)/documents/bookings/$(bookingId)) &&
+                         request.auth.uid in get(/databases/$(database)/documents/bookings/$(bookingId)).data.participantUids;
+
+        allow update, delete: if false;
+      }
+    }
+
+    // 9. Musician Reviews
+    match /musician_reviews/{reviewId} {
+      allow get: if isSignedIn() && isValidId(reviewId) && resource != null && (existing().publicListed == true || existing().authorId == request.auth.uid);
+      allow list: if isSignedIn() && (existing().publicListed == true || existing().authorId == request.auth.uid);
+
+      allow create: if isSignedIn() &&
+                       isValidId(reviewId) &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().authorId != incoming().musicianId &&
+                       incoming().keys().hasAll(['musicianId', 'authorId', 'authorName', 'rating', 'comment', 'publicListed', 'createdAt']) &&
+                       incoming().keys().hasOnly(['musicianId', 'authorId', 'authorName', 'rating', 'comment', 'publicListed', 'createdAt']) &&
+                       isValidMusicianReview(incoming());
+
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(reviewId) && existing().authorId == request.auth.uid;
+    }
+  }
+}

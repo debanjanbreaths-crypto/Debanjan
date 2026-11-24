@@ -1,0 +1,324 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Authenticated SoundStage user account and role configuration.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Display name" },
+        "handle": { "type": "string", "description": "Unique @handle" },
+        "role": { "type": "string", "enum": ["MUSICIAN", "CLIENT"] },
+        "avatarUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "location": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "name", "handle", "role", "avatarUrl", "bio", "location", "verified", "createdAt", "updatedAt"]
+    },
+    "SocialConnection": {
+      "title": "SocialConnection",
+      "description": "Connected social account metadata (Instagram, YouTube, Spotify) owned by the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "provider": { "type": "string", "enum": ["INSTAGRAM", "YOUTUBE", "SPOTIFY"] },
+        "externalHandle": { "type": "string" },
+        "profileUrl": { "type": "string" },
+        "followerCount": { "type": "integer" },
+        "connected": { "type": "boolean" },
+        "sandboxMode": { "type": "boolean" },
+        "lastSyncedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "provider", "externalHandle", "profileUrl", "followerCount", "connected", "sandboxMode", "lastSyncedAt", "createdAt", "updatedAt"]
+    },
+    "MusicianProfile": {
+      "title": "MusicianProfile",
+      "description": "Public musician showcase profile with specialties, genres, rates, gear, and Instagram badge.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "handle": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "coverUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "location": { "type": "string" },
+        "remoteAvailable": { "type": "boolean" },
+        "verified": { "type": "boolean" },
+        "instagramConnected": { "type": "boolean" },
+        "instagramHandle": { "type": "string" },
+        "instagramFollowers": { "type": "integer" },
+        "specialties": { "type": "array" },
+        "genres": { "type": "array" },
+        "instruments": { "type": "array" },
+        "experienceYears": { "type": "integer" },
+        "hourlyRate": { "type": "integer" },
+        "perGigRate": { "type": "integer" },
+        "perTrackRate": { "type": "integer" },
+        "currency": { "type": "string" },
+        "availabilityStatus": { "type": "string", "enum": ["AVAILABLE", "LIMITED", "BOOKED"] },
+        "gearList": { "type": "string" },
+        "hasVideoDemos": { "type": "boolean" },
+        "publicListed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "name", "handle", "avatarUrl", "coverUrl", "bio", "location",
+        "remoteAvailable", "verified", "instagramConnected", "instagramHandle",
+        "instagramFollowers", "specialties", "genres", "instruments",
+        "experienceYears", "hourlyRate", "perGigRate", "perTrackRate",
+        "currency", "availabilityStatus", "gearList", "hasVideoDemos",
+        "publicListed", "createdAt", "updatedAt"
+      ]
+    },
+    "PortfolioItem": {
+      "title": "PortfolioItem",
+      "description": "Playable video reel, YouTube/Instagram embed, or audio demo item.",
+      "type": "object",
+      "properties": {
+        "musicianId": { "type": "string" },
+        "musicianName": { "type": "string" },
+        "musicianHandle": { "type": "string" },
+        "title": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["NATIVE_VIDEO", "INSTAGRAM_REEL", "YOUTUBE_VIDEO", "AUDIO"] },
+        "sourceUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "aspectRatio": { "type": "string", "enum": ["9:16", "16:9", "1:1"] },
+        "genreTag": { "type": "string" },
+        "duration": { "type": "string" },
+        "viewsCount": { "type": "integer" },
+        "publicListed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "musicianId", "musicianName", "musicianHandle", "title", "mediaType",
+        "sourceUrl", "thumbnailUrl", "aspectRatio", "genreTag", "duration",
+        "viewsCount", "publicListed", "createdAt", "updatedAt"
+      ]
+    },
+    "FeedPost": {
+      "title": "FeedPost",
+      "description": "Social feed post on The Stage.",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorHandle": { "type": "string" },
+        "authorAvatarUrl": { "type": "string" },
+        "authorVerified": { "type": "boolean" },
+        "content": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["VIDEO", "REEL_EMBED", "AUDIO", "IMAGE", "NONE"] },
+        "mediaUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "postType": { "type": "string", "enum": ["JAM_CLIP", "LIVE_PERFORMANCE", "LOOKING_FOR_BANDMATE", "GEAR_TALK"] },
+        "likesCount": { "type": "integer" },
+        "commentsCount": { "type": "integer" },
+        "publicListed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "authorId", "authorName", "authorHandle", "authorAvatarUrl", "authorVerified",
+        "content", "mediaType", "mediaUrl", "thumbnailUrl", "postType",
+        "likesCount", "commentsCount", "publicListed", "createdAt", "updatedAt"
+      ]
+    },
+    "LikedPost": {
+      "title": "LikedPost",
+      "description": "User-scoped liked post marker.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "postId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "postId", "createdAt"]
+    },
+    "PostComment": {
+      "title": "PostComment",
+      "description": "Comment on a Stage feed post.",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorHandle": { "type": "string" },
+        "text": { "type": "string" },
+        "publicListed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "authorId", "authorName", "authorHandle", "text", "publicListed", "createdAt"]
+    },
+    "GigListing": {
+      "title": "GigListing",
+      "description": "Open paid gig or remote studio session opportunity.",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "requiredSpecialties": { "type": "array" },
+        "genre": { "type": "string" },
+        "location": { "type": "string" },
+        "remote": { "type": "boolean" },
+        "eventDate": { "type": "string" },
+        "budgetMin": { "type": "integer" },
+        "budgetMax": { "type": "integer" },
+        "status": { "type": "string", "enum": ["OPEN", "FILLED"] },
+        "publicListed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "clientId", "clientName", "title", "description", "requiredSpecialties",
+        "genre", "location", "remote", "eventDate", "budgetMin", "budgetMax",
+        "status", "publicListed", "createdAt", "updatedAt"
+      ]
+    },
+    "GigApplication": {
+      "title": "GigApplication",
+      "description": "Musician one-click gig application with attached reel and rate card.",
+      "type": "object",
+      "properties": {
+        "gigId": { "type": "string" },
+        "gigTitle": { "type": "string" },
+        "clientId": { "type": "string" },
+        "musicianId": { "type": "string" },
+        "musicianName": { "type": "string" },
+        "musicianHandle": { "type": "string" },
+        "attachedReelTitle": { "type": "string" },
+        "attachedReelUrl": { "type": "string" },
+        "proposedRate": { "type": "integer" },
+        "rateType": { "type": "string", "enum": ["HOURLY", "PER_GIG", "PER_TRACK"] },
+        "note": { "type": "string" },
+        "status": { "type": "string", "enum": ["APPLIED", "SHORTLISTED", "DECLINED"] },
+        "participantUids": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "gigId", "gigTitle", "clientId", "musicianId", "musicianName",
+        "musicianHandle", "attachedReelTitle", "attachedReelUrl",
+        "proposedRate", "rateType", "note", "status", "participantUids",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Direct booking offer and conversation thread between client and musician.",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "musicianId": { "type": "string" },
+        "musicianName": { "type": "string" },
+        "musicianHandle": { "type": "string" },
+        "musicianAvatarUrl": { "type": "string" },
+        "gigId": { "type": "string" },
+        "proposedRate": { "type": "integer" },
+        "rateType": { "type": "string", "enum": ["HOURLY", "PER_GIG", "PER_TRACK"] },
+        "eventDate": { "type": "string" },
+        "scopeNotes": { "type": "string" },
+        "lastMessagePreview": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "ACCEPTED", "DECLINED", "COMPLETED"] },
+        "participantUids": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "clientId", "clientName", "musicianId", "musicianName",
+        "musicianHandle", "musicianAvatarUrl", "gigId", "proposedRate",
+        "rateType", "eventDate", "scopeNotes", "lastMessagePreview",
+        "status", "participantUids", "createdAt", "updatedAt"
+      ]
+    },
+    "BookingMessage": {
+      "title": "BookingMessage",
+      "description": "Message inside a booking thread.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "messageType": { "type": "string", "enum": ["TEXT", "BOOKING_OFFER", "STATUS_UPDATE"] },
+        "participantUids": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bookingId", "senderId", "senderName", "text", "messageType", "participantUids", "createdAt"]
+    },
+    "MusicianReview": {
+      "title": "MusicianReview",
+      "description": "Client review on a musician profile.",
+      "type": "object",
+      "properties": {
+        "musicianId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "publicListed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["musicianId", "authorId", "authorName", "rating", "comment", "publicListed", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "Private user account and role preferences."
+    },
+    "/users/{userId}/social_connections/{connectionId}": {
+      "schema": { "$ref": "#/entities/SocialConnection" },
+      "description": "Connected social account metadata owned by the user."
+    },
+    "/users/{userId}/liked_posts/{postId}": {
+      "schema": { "$ref": "#/entities/LikedPost" },
+      "description": "User-scoped liked post records."
+    },
+    "/musician_profiles/{profileId}": {
+      "schema": { "$ref": "#/entities/MusicianProfile" },
+      "description": "Public musician directory profiles."
+    },
+    "/portfolio_items/{itemId}": {
+      "schema": { "$ref": "#/entities/PortfolioItem" },
+      "description": "Public musician video/reel/audio portfolio items."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/FeedPost" },
+      "description": "Social feed posts on The Stage."
+    },
+    "/post_comments/{commentId}": {
+      "schema": { "$ref": "#/entities/PostComment" },
+      "description": "Public comments on feed posts."
+    },
+    "/gigs/{gigId}": {
+      "schema": { "$ref": "#/entities/GigListing" },
+      "description": "Open paid gigs and remote session opportunities."
+    },
+    "/gig_applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/GigApplication" },
+      "description": "Private gig applications shared between musician and client."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Private booking offers between client and musician."
+    },
+    "/bookings/{bookingId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/BookingMessage" },
+      "description": "Direct messages inside a booking conversation."
+    },
+    "/musician_reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/MusicianReview" },
+      "description": "Verified reviews on musician profiles."
+    }
+  }
+}
